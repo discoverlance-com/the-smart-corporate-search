@@ -21,8 +21,8 @@ COPY --from=builder /app/config.toml /app/.streamlit/config.toml
 
 USER nonroot
 
-EXPOSE 8080
+EXPOSE 8501
 
 # we cannot execute the 'streamlit' binary in distroless
 # we instead execute the 'streamlit' module directly with -m
-CMD ["-m", "streamlit", "run", "streamlit_app.py", "--server.port=8080", "--server.address=0.0.0.0"]
+CMD ["-m", "streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]

@@ -7,4 +7,4 @@ showSidebarBorder=true
 primaryColor="#f54a00"
 
 [logger]
-messageFormat="%(asctime)s %(levelname)s $(component) %(message)s",
+messageFormat="%(asctime)s %(levelname)s $(component) %(message)s"
