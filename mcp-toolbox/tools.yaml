@@ -10,7 +10,163 @@ sources:
     ipType: "private" # Use "public" if connecting over public IP
 
 tools:
-  postgres_list_tables:
+  list-tables:
     kind: postgres-list-tables
     source: postgres-source
     description: Use this tool to retrieve schema information for all or specified tables. Output format can be simple (only table names) or detailed.
+  get-sales-kpis:
+    kind: postgres-sql
+    source: postgres-source
+    description: >-
+      Get high-level KPIs (Total Revenue, Total Profit, Total Units Sold) 
+      for a specific date range.
+    parameters:
+      - name: start_date
+        type: string
+        description: Start date in YYYY-MM-DD format.
+      - name: end_date
+        type: string
+        description: End date in YYYY-MM-DD format.
+    statement: >-
+      SELECT 
+        SUM(s.total_amount) as total_revenue,
+        SUM(s.quantity) as total_units_sold,
+        SUM(s.quantity * (p.price - p.cost)) as total_profit
+      FROM sales s
+      JOIN products p ON s.product_id = p.id
+      WHERE s.sale_date BETWEEN CAST($1 AS DATE) AND CAST($2 AS DATE);
+
+  get-monthly-sales-trend:
+    kind: postgres-sql
+    source: postgres-source
+    description: >-
+      Get the sales revenue trend grouped by month for a date range. 
+      Useful for generating line charts.
+    parameters:
+      - name: start_date
+        type: string
+        description: Start date in YYYY-MM-DD format.
+      - name: end_date
+        type: string
+        description: End date in YYYY-MM-DD format.
+    statement: >-
+      SELECT 
+        TO_CHAR(sale_date, 'YYYY-MM') as month_str, 
+        SUM(total_amount) as revenue
+      FROM sales
+      WHERE sale_date BETWEEN CAST($1 AS DATE) AND CAST($2 AS DATE)
+      GROUP BY month_str
+      ORDER BY month_str ASC;
+
+  get-sales-by-category:
+    kind: postgres-sql
+    source: postgres-source
+    description: >-
+      Get total revenue broken down by product category. 
+      Useful for identifying best-performing segments.
+    parameters:
+      - name: start_date
+        type: string
+        description: Start date in YYYY-MM-DD format.
+      - name: end_date
+        type: string
+        description: End date in YYYY-MM-DD format.
+    statement: >-
+      SELECT 
+        p.category, 
+        SUM(s.total_amount) as revenue,
+        COUNT(s.id) as transaction_count
+      FROM sales s
+      JOIN products p ON s.product_id = p.id
+      WHERE s.sale_date BETWEEN CAST($1 AS DATE) AND CAST($2 AS DATE)
+      GROUP BY p.category
+      ORDER BY revenue DESC;
+
+  get-sales-by-region:
+    kind: postgres-sql
+    source: postgres-source
+    description: >-
+      Get total revenue broken down by customer region.
+    parameters:
+      - name: start_date
+        type: string
+        description: Start date in YYYY-MM-DD format.
+      - name: end_date
+        type: string
+        description: End date in YYYY-MM-DD format.
+    statement: >-
+      SELECT 
+        c.region, 
+        SUM(s.total_amount) as revenue
+      FROM sales s
+      JOIN customers c ON s.customer_id = c.id
+      WHERE s.sale_date BETWEEN CAST($1 AS DATE) AND CAST($2 AS DATE)
+      GROUP BY c.region
+      ORDER BY revenue DESC;
+
+  get-top-customers:
+    kind: postgres-sql
+    source: postgres-source
+    description: >-
+      List the top spending customers within a date range.
+    parameters:
+      - name: limit_count
+        type: integer
+        description: The number of customers to return (e.g., 5, 10).
+      - name: start_date
+        type: string
+        description: Start date in YYYY-MM-DD format.
+      - name: end_date
+        type: string
+        description: End date in YYYY-MM-DD format.
+    statement: >-
+      SELECT 
+        c.company_name, 
+        c.tier,
+        SUM(s.total_amount) as total_spend
+      FROM sales s
+      JOIN customers c ON s.customer_id = c.id
+      WHERE s.sale_date BETWEEN CAST($2 AS DATE) AND CAST($3 AS DATE)
+      GROUP BY c.company_name, c.tier
+      ORDER BY total_spend DESC
+      LIMIT CAST($1 AS INT);
+
+  search-products:
+    kind: postgres-sql
+    source: postgres-source
+    description: >-
+      Search for products by name to find their IDs or details.
+    parameters:
+      - name: search_term
+        type: string
+        description: Partial name of the product.
+    statement: >-
+      SELECT id, name, category, price 
+      FROM products 
+      WHERE name ILIKE '%' || $1 || '%'
+      LIMIT 10;
+  search-customers:
+    kind: postgres-sql
+    source: postgres-source
+    description: >-
+      Search for customers by company name to find their IDs or details.
+    parameters:
+      - name: search_term
+        type: string
+        description: Partial name of the company.
+    statement: >-
+      SELECT id, company_name, region, tier
+      FROM customers 
+      WHERE company_name ILIKE '%' || $1 || '%'
+      LIMIT 10;
+
+toolsets:
+  ecommerce-toolset:
+    - list-tables
+    - get-sales-kpis
+    - get-monthly-sales-trend
+    - get-sales-by-category
+    - get-sales-by-region
+    - get-top-customers
+    - search-products
+    - search-customers

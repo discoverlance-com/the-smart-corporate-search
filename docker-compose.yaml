@@ -11,6 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - mcp_postgres_data:/var/lib/postgresql/data
+      - ./mcp-toolbox/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mcpuser -d mcpdb"]
       interval: 10s
@@ -35,7 +36,6 @@ services:
       - "8081:8081"
     volumes:
       - ./mcp-toolbox/tools.dev.yaml:/app/tools.yaml:ro
-      - ./mcp-toolbox:/app:ro # Mount source code for live sync
     command:
       - "--tools-file=/app/tools.yaml"
       - "--address=0.0.0.0"
@@ -61,7 +61,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./ai-agent:/app:ro # Mount source code for live sync
+      - ./ai-agent:/app
 
   frontend:
     build:
@@ -75,9 +75,8 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      - ./frontend:/app:ro # Mount source code for live sync
-      # For Streamlit config
-      - ./frontend/.streamlit:/app/.streamlit:ro
+      - ./frontend/streamlit_app.py:/app/streamlit_app.py
+      - ./frontend/.streamlit/config.toml:/app/.streamlit/config.toml
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
       interval: 30s
