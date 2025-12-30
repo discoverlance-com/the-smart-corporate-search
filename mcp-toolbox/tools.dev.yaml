@@ -1,0 +1,14 @@
+sources:
+  postgres-source:
+    kind: postgres
+    host: 127.0.0.1
+    port: 5432
+    database: ${DB_NAME}
+    user: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+tools:
+  postgres_list_tables:
+    kind: postgres-list-tables
+    source: postgres-source
+    description: Use this tool to retrieve schema information for all or specified tables. Output format can be simple (only table names) or detailed.

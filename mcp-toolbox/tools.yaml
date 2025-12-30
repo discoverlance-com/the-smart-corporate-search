@@ -1,0 +1,15 @@
+sources:
+  postgres-source:
+    kind: cloud-sql-postgres
+    project: ${DB_PROJECT}
+    region: ${DB_REGION}
+    instance: ${DB_INSTANCE}
+    database: ${DB_NAME}
+    user: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+tools:
+  postgres_list_tables:
+    kind: postgres-list-tables
+    source: postgres-source
+    description: Use this tool to retrieve schema information for all or specified tables. Output format can be simple (only table names) or detailed.
