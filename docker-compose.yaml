@@ -1,0 +1,93 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: mcp-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: mcpuser
+      POSTGRES_PASSWORD: mcppassword
+      POSTGRES_DB: mcpdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - mcp_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mcpuser -d mcpdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mcp-toolbox:
+    build:
+      context: ./mcp-toolbox
+      dockerfile: Dockerfile
+    container_name: corporate-agent-mcp-toolbox
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: mcpuser
+      DB_PASSWORD: mcppassword
+      DB_NAME: mcpdb
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./mcp-toolbox/tools.dev.yaml:/app/tools.yaml:ro
+      - ./mcp-toolbox:/app:ro # Mount source code for live sync
+    command:
+      - "--tools-file=/app/tools.yaml"
+      - "--address=0.0.0.0"
+      - "--port=8081"
+      - "--allowed-origins=http://localhost:8080"
+
+  ai-agent:
+    build:
+      context: ./ai-agent
+      dockerfile: Dockerfile
+    container_name: corporate-agent-ai
+    depends_on:
+      - mcp-toolbox
+    environment:
+      PORT: 8080
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-omni-deploy-run}
+      GOOGLE_CLOUD_LOCATION: us-central1
+      GOOGLE_GENAI_USE_VERTEXAI: "False"
+      ENABLE_CLOUD_TRACE: "False"
+      GEMINI_MODEL_NAME: "gemini-2.5-flash"
+      COMPANY_NAME: "TechCorp"
+      MCP_TOOLBOX_SERVICE_URL: http://mcp-toolbox:8081
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./ai-agent:/app:ro # Mount source code for live sync
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: corporate-agent-frontend
+    depends_on:
+      - ai-agent
+    environment:
+      AI_AGENT_URL: http://ai-agent:8080
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./frontend:/app:ro # Mount source code for live sync
+      # For Streamlit config
+      - ./frontend/.streamlit:/app/.streamlit:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mcp_postgres_data:
+
+networks:
+  default:
+    name: corporate-agent-network
