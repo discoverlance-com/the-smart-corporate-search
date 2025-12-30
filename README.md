@@ -94,13 +94,27 @@ The project is designed for easy development with live file synchronization:
 
 #### Database Configuration
 
+##### Development (Local PostgreSQL)
+
 - `DB_HOST`: postgres
 - `DB_PORT`: 5432
 - `DB_USER`: mcpuser
 - `DB_PASSWORD`: mcppassword
 - `DB_NAME`: mcpdb
 
-## 🏢 Project Structure
+##### Production (Google Cloud SQL)
+
+- `DB_PROJECT`: Your Google Cloud project ID
+- `DB_REGION`: Database region (e.g., us-central1)
+- `DB_INSTANCE`: Cloud SQL instance name
+- `DB_USER`: Cloud SQL database user
+- `DB_PASSWORD`: Cloud SQL database password
+- `DB_NAME`: Database name
+
+> **Note**: The MCP Toolbox uses different configuration files:
+>
+> - `tools.dev.yaml` for local development (connects to containerized PostgreSQL)
+> - `tools.yaml` for production deployment (connects to Google Cloud SQL)
 
 ```text
 ├── ai-agent/                 # AI Agent service (Google ADK)
@@ -118,8 +132,8 @@ The project is designed for easy development with live file synchronization:
 │   └── requirements.txt
 ├── mcp-toolbox/            # Model Context Protocol toolbox
 │   ├── Dockerfile
-│   ├── tools.dev.yaml      # Tool configurations
-│   └── tools.yaml          # Production tool configs
+│   ├── tools.dev.yaml      # Development tools (local PostgreSQL)
+│   └── tools.yaml          # Production tools (Google Cloud SQL)
 ├── iac/                    # Infrastructure as Code (Terraform)
 │   └── README.md           # Infrastructure setup (in development)
 └── docker-compose.yaml     # Complete service orchestration
