@@ -7,6 +7,7 @@ sources:
     database: ${DB_NAME}
     user: ${DB_USER}
     password: ${DB_PASSWORD}
+    ipType: "private" # Use "public" if connecting over public IP
 
 tools:
   postgres_list_tables:
