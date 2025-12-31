@@ -1,35 +1,214 @@
 from google.adk.agents.llm_agent import Agent
+from google.adk.agents.loop_agent import LoopAgent
+from google.adk.agents.sequential_agent import SequentialAgent
 from google.genai import types
-from google.adk.tools.tool_context import ToolContext
+from toolbox_core import ToolboxSyncClient, auth_methods
 import os
-from pydantic import BaseModel, Field
 from .tools import exit_loop
+from .models import FinalPresentation
 
-GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash")
-GEMINI_SQL_REVIEWER_MODEL_NAME = os.getenv(
-    "GEMINI_SQL_REVIEWER_MODEL_NAME", "gemini-2.5-flash")
-GEMINI_SQL_ANALYST_MODEL_NAME = os.getenv(
-    "GEMINI_SQL_ANALYST_MODEL_NAME", "gemini-2.5-pro")
+GEMINI_QUERY_REVIEWER_MODEL_NAME = os.getenv(
+    "GEMINI_QUERY_REVIEWER_MODEL_NAME", "gemini-2.5-flash-lite")
+GEMINI_QUERY_ANALYST_MODEL_NAME = os.getenv(
+    "GEMINI_QUERY_ANALYST_MODEL_NAME", "gemini-2.5-pro")
+GEMINI_PRESENTER_MODEL_NAME = os.getenv(
+    "GEMINI_PRESENTER_MODEL_NAME", "gemini-2.5-flash")
 COMPANY_NAME = os.getenv("COMPANY_NAME", "TechCorp")
+MCP_TOOLBOX_SERVICE_URL = os.getenv("MCP_TOOLBOX_SERVICE_URL")
 
-STATE_SQL_DATA = "sql_query_data"
+if not MCP_TOOLBOX_SERVICE_URL:
+    raise ValueError(
+        "MCP_TOOLBOX_SERVICE_URL environment variable is not set.")
+
+
+def get_toolbox_client():
+    """Get toolbox client with fresh authentication for each request."""
+    if not MCP_TOOLBOX_SERVICE_URL:
+        raise ValueError(
+            "MCP_TOOLBOX_SERVICE_URL environment variable is required")
+
+    try:
+        # Try without authentication first (for local development)
+        return ToolboxSyncClient(url=MCP_TOOLBOX_SERVICE_URL)
+    except Exception:
+        # Use fresh auth token for each request (handles token expiration)
+        auth_token_provider = auth_methods.get_google_id_token(
+            MCP_TOOLBOX_SERVICE_URL)
+        return ToolboxSyncClient(
+            url=MCP_TOOLBOX_SERVICE_URL,
+            client_headers={"Authorization": auth_token_provider}
+        )
+
+
+def get_sql_toolset():
+    """Get SQL toolset with fresh toolbox client."""
+    toolbox = get_toolbox_client()
+    try:
+        return toolbox.load_toolset("ecommerce-toolset")
+    except Exception:
+        return []
+
+
+# Initialize toolset
+sql_toolset = get_sql_toolset()
+
+STATE_QUERY_DATA = "sql_query_data"
 STATE_COMPLETION_PHRASE = "SQL_QUERY_COMPLETED"
-STATE_SQL_CRITIQUE = "sql_query_critique"
+STATE_QUERY_CRITIQUE = "sql_query_critique"
 STATE_USER_QUESTION = "user_question"
 
-root_agent = Agent(
-    model=GEMINI_MODEL_NAME,
-    name='corporate_agent',
-    description="agent_description",
-    instruction="agent_instruction",
+retriever_agent = Agent(
+    name="retriever_agent",
+    model=GEMINI_QUERY_ANALYST_MODEL_NAME,
+    tools=sql_toolset,  # type: ignore
+    description="""A Data Retriever agent capable of querying information from a corporate PostgreSQL database. It uses available tools perform the query.""",
+    instruction=f"""
+    You are a Senior Data Retriever for '{COMPANY_NAME}'. Your goal is to answer user questions by querying the corporate database. 
+    
+    **Context:**
+    User's question: {{user_question}}
+    Feedback: {{sql_query_critique}}
+
+    **Your Workflow:**
+
+    **Step 1: Discovery**
+    - ALWAYS start by using the `list-tables` tool to discover available database tables and their schemas
+    - This gives you the current database structure without guessing
+    
+    **Step 2: Analysis**
+    - Based on the user's question and discovered schema, determine which tools are most appropriate
+    - Available tools include: list-tables, get-sales-kpis, get-monthly-sales-trend, get-sales-by-category, get-sales-by-region, get-top-customers, search-products, search-customers
+    
+    **Step 3: Execution**
+    - Execute the appropriate tool(s) to get the requested information
+    - Use date ranges like '2024-01-01' to '2024-12-31' when tools require date parameters
+    - If you get feedback, use it to refine your tool selection and parameters
+    
+    **Decision Logic:**
+    - IF the request cannot be answered with available tools, return: {{"status": "irrelevant"}}
+    - ELSE proceed to get and return the data
+    
+    **Important:** 
+    - Never assume database structure - always discover first using list-tables
+    - Use the specific tools designed for common business queries
+    - Provide date ranges in YYYY-MM-DD format when required
+    """,
+    output_key=STATE_QUERY_DATA,
+    include_contents='none',
     generate_content_config=types.GenerateContentConfig(
-        temperature=0.2,
-        max_output_tokens=4096,
+        temperature=0.1,
+        max_output_tokens=2048,
         safety_settings=[
             types.SafetySetting(
                 category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                threshold=types.HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+                threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
             )
         ]
     ),
+)
+
+data_critique_agent = Agent(
+    name="data_critique_agent",
+    model=GEMINI_QUERY_REVIEWER_MODEL_NAME,
+    include_contents='none',
+    description="""A specialized agent that reviews the results of data generated by the Data Retriever agent for correctness and completeness.""",
+    instruction=f"""
+    You are a Senior Logic Auditor for '{COMPANY_NAME}'. Review the data retrieval results for correctness and completeness.
+    
+    **User Request**: {{user_question}}
+    **Agent Result**: {{sql_query_data}}
+
+    **Your Review Process:**
+    
+    1. **Check for Irrelevance**: 
+       - If result contains {{"status": "irrelevant"}}: Call `exit_loop` (query cannot be answered)
+    
+    2. **Check for Errors**:
+       - Empty results, error messages, or incomplete data
+       - If errors found: Provide specific feedback on what needs fixing
+    
+    3. **Check for Completeness**:
+       - Does the data fully answer the user's question?
+       - Is the data format suitable for presentation?
+       - If complete and correct: Call `exit_loop`
+    
+    **Feedback Guidelines:**
+    - Be specific about what's wrong or missing
+    - Suggest which tools might give better results
+    - Focus on data quality, not formatting
+    """,
+    output_key=STATE_QUERY_CRITIQUE,
+    tools=[exit_loop],
+    generate_content_config=types.GenerateContentConfig(
+        temperature=0.2,
+        max_output_tokens=512,
+        safety_settings=[
+            types.SafetySetting(
+                category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            )
+        ]
+    ),
+)
+
+retrieval_critique_loop_agent = LoopAgent(
+    name="retrieval_critique_loop_agent",
+    sub_agents=[retriever_agent, data_critique_agent],
+    max_iterations=3,
+)
+
+presenter_agent = Agent(
+    name="presenter_agent",
+    model=GEMINI_PRESENTER_MODEL_NAME,
+    description="""A specialized agent that presents the final query results in a user-friendly format.""",
+    include_contents='none',
+    instruction=f"""
+    You are a Senior Data Presenter for '{COMPANY_NAME}'. Format query results for user consumption.
+    
+    **Query Results**: {{sql_query_data}}
+    **User Question**: {{user_question}}
+
+    **Your Output Options:**
+
+    **Case 1: Unable to Answer**
+    - If results contain {{"status": "irrelevant"}} or errors
+    - `response_type`: "unable_to_answer"
+    - `summary_text`: Clear explanation of why (e.g., "I cannot answer this because the data requested is not available in our database")
+    - `vega_lite_spec`: null
+
+    **Case 2: Visual Representation**
+    - If data shows trends, comparisons, distributions, or user asks for charts/graphs
+    - `response_type`: "visual"
+    - `summary_text`: Brief explanation of what the chart shows
+    - `vega_lite_spec`: Valid Vega-Lite v5 JSON with embedded data
+    - Use appropriate chart types: bar, line, pie, scatter, etc.
+
+    **Case 3: Text Summary**
+    - If data is best presented as numbers, lists, or specific values
+    - `response_type`: "text"
+    - `summary_text`: Well-formatted, human-readable summary
+    - `vega_lite_spec`: null
+
+    **Quality Guidelines:**
+    - Make summaries conversational and business-focused
+    - For visuals, choose appropriate chart types and include titles/labels
+    - Always provide context and insights, not just raw data
+    """,
+    output_schema=FinalPresentation,
+    generate_content_config=types.GenerateContentConfig(
+        temperature=0.3,
+        max_output_tokens=3072,
+        safety_settings=[
+            types.SafetySetting(
+                category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            )
+        ]
+    ),
+)
+
+root_agent = SequentialAgent(
+    name='corporate_agent',
+    sub_agents=[retrieval_critique_loop_agent, presenter_agent],
+    description="An agent that retrieves data from a corporate database, critiques the results, and presents them to the user in a friendly format.",
 )

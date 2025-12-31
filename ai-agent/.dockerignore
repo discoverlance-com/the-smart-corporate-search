@@ -8,3 +8,4 @@ ENV/
 env.bak/
 venv.bak/
 service.dev.yaml
+.adk/
