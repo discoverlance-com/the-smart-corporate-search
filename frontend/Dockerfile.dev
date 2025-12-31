@@ -1,0 +1,23 @@
+# Development Dockerfile for Docker Compose watch compatibility
+FROM python:3.13-slim
+
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Create non-root user with proper permissions for watch
+RUN adduser --disabled-password --gecos "" appuser && \
+    chown -R appuser:appuser /app
+
+# Copy source files with proper ownership for watch
+COPY --chown=appuser:appuser . .
+
+USER appuser
+
+EXPOSE 8501
+
+# Use streamlit command directly (works in full Python image)
+CMD ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]

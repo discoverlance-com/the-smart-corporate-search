@@ -59,7 +59,7 @@ This project consists of four main components that work together to deliver inte
 4. **Start all services**
 
    ```bash
-   docker-compose up --build
+   docker-compose up --watch
    ```
 
 5. **Access the application**
@@ -69,11 +69,43 @@ This project consists of four main components that work together to deliver inte
 
 ## 🛠️ Development
 
-The project is designed for easy development with live file synchronization:
+The project is designed for easy development with **Docker Compose watch** for instant file synchronization:
 
-- All source code is mounted as volumes in the containers
-- Changes to your local files are immediately reflected in the running containers
-- Each service can be developed independently
+### Development Modes
+
+#### Option 1: Docker Compose Watch (Recommended)
+
+```bash
+# Start all services with live file watching
+docker-compose up --watch
+
+# Or start services and watch separately for cleaner logs
+docker-compose up -d
+docker-compose watch
+```
+
+**Features:**
+
+- ✅ **Instant Updates**: Code changes automatically sync to running containers
+- ✅ **Smart Ignoring**: Excludes `__pycache__/`, `*.pyc`, `.venv/`, `.adk/` files
+- ✅ **Selective Rebuilds**: Only rebuilds when `requirements.txt` changes
+- ✅ **Performance Optimized**: Better than bind mounts with intelligent file filtering
+
+#### Option 2: Traditional Development
+
+```bash
+# Standard build and run
+docker-compose up --build
+
+# Rebuild specific service after changes
+docker-compose up --build ai-agent -d
+```
+
+### Development Dockerfiles
+
+- **AI Agent**: Uses production `Dockerfile` (watch-incompatible)
+- **Frontend**: Uses `Dockerfile.dev` for watch compatibility (production uses distroless)
+- **MCP Toolbox**: Uses pre-built image (no local development needed)
 
 ### Service Dependencies
 
@@ -127,8 +159,9 @@ The project is designed for easy development with live file synchronization:
 │       ├── tools.py         # Agent tools (in development)
 │       └── .env            # Google API key configuration
 ├── frontend/                # Streamlit frontend
-│   ├── Dockerfile
-│   ├── streamlit_app.py    # Chat interface
+│   ├── Dockerfile           # Production build (distroless)
+│   ├── Dockerfile.dev       # Development build (watch-compatible)
+│   ├── streamlit_app.py     # Chat interface
 │   └── requirements.txt
 ├── mcp-toolbox/            # Model Context Protocol toolbox
 │   ├── Dockerfile
