@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Literal
+from typing import Optional, Literal, Any
 
 
 class FinalPresentation(BaseModel):
@@ -14,6 +14,6 @@ class FinalPresentation(BaseModel):
         ..., description="A brief summary text that explains the results or the reason for being unable to answer."
     )
 
-    vega_lite_spec: Optional[dict] = Field(
-        None, description="A Vega-Lite v5 JSON specification for visual representation of the data, if the response_type is 'visual'."
+    vega_lite_spec: str = Field(
+        ..., description="A Vega-Lite v5 JSON specification as a JSON string for visual representation of the data. Must be a complete JSON string with data and encoding fields for visual responses."
     )

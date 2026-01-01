@@ -9,8 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN adduser --disabled-password --gecos "" myuser && \
     chown -R myuser:myuser /app
-
-COPY . .
+    
+COPY --chown=myuser:myuser . .
 
 USER myuser
 
