@@ -55,13 +55,24 @@ services:
       GOOGLE_CLOUD_LOCATION: us-central1
       GOOGLE_GENAI_USE_VERTEXAI: "False"
       ENABLE_CLOUD_TRACE: "False"
-      GEMINI_QUERY_REVIEWER_MODEL_NAME: "gemini-2.5-flash-lite"
       GEMINI_QUERY_ANALYST_MODEL_NAME: "gemini-2.5-pro"
       GEMINI_PRESENTER_MODEL_NAME: "gemini-2.5-flash"
       COMPANY_NAME: "TechCorp"
       MCP_TOOLBOX_SERVICE_URL: http://mcp-toolbox:8081
     ports:
       - "8080:8080"
+    command:
+      [
+        "python",
+        "-m",
+        "uvicorn",
+        "main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8080",
+        "--reload",
+      ]
     develop:
       watch:
         - action: sync
