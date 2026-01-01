@@ -1,6 +1,15 @@
 # The Smart Corporate Search 🤖
 
-An intelligent internal RAG (Retrieval Augmented Generation) application that allows you to query your internal systems using natural language. Ask questions like "Who is our biggest customer by total revenue?" and get instant answers powered by AI agents and your corporate data.
+An intelligent internal RAG (Retrieval Augmented Generation) application that allows you to query your internal systems using natural language. Ask questions like "Who is our biggest customer by total revenue?" and get instant answers with detailed analysis, interactive charts, and actionable business insights powered by AI agents and your corporate data.
+
+## ✨ Key Features
+
+- **Natural Language Queries**: Ask complex business questions in plain English
+- **Intelligent Analysis**: AI agents provide detailed insights and contextual analysis
+- **Interactive Charts**: Automatic visualization generation for trends, comparisons, and distributions
+- **Sequential Agent Architecture**: Specialized agents for data retrieval and presentation
+- **Real-time Chat Interface**: Streamlit-powered frontend with persistent chat history
+- **SQL Tool Integration**: MCP toolbox with comprehensive database operations
 
 ## 🏗️ Architecture
 
@@ -15,10 +24,10 @@ This project consists of four main components that work together to deliver inte
 
 ### Components
 
-- **Frontend (Port 8501)**: Streamlit-based chat interface where users interact with the system using natural language queries
-- **AI Agent (Port 8080)**: FastAPI application powered by Google ADK (Agent Development Kit) that orchestrates multiple AI agents to understand queries and generate responses
-- **MCP Toolbox (Port 8081)**: Model Context Protocol server that exposes SQL tools and database operations for the AI agents to use
-- **PostgreSQL (Port 5432)**: Database containing your corporate data that powers the search and analytics
+- **Frontend (Port 8501)**: Streamlit-based chat interface with interactive chart rendering, persistent chat history, and real-time response streaming
+- **AI Agent (Port 8080)**: FastAPI application powered by Google ADK featuring sequential agent architecture with specialized retriever and presenter agents for data analysis and visualization
+- **MCP Toolbox (Port 8081)**: Model Context Protocol server with comprehensive SQL tools including KPI analysis, trend analysis, customer insights, and product analytics
+- **PostgreSQL (Port 5432)**: Database containing your corporate data with sample e-commerce dataset for testing and development
 
 ## 🚀 Quick Start
 
@@ -153,10 +162,10 @@ docker-compose up --build ai-agent -d
 │   ├── Dockerfile
 │   ├── main.py              # FastAPI entry point
 │   ├── requirements.txt
-│   └── corporate_agent/     # Agent implementation
+│   └── corporate_agent/     # Sequential agent implementation
 │       ├── __init__.py
-│       ├── agent.py         # Agent logic (in development)
-│       ├── tools.py         # Agent tools (in development)
+│       ├── agent.py         # Retriever and presenter agents with Vega-Lite generation
+│       ├── models.py        # Pydantic models for structured responses
 │       └── .env            # Google API key configuration
 ├── frontend/                # Streamlit frontend
 │   ├── Dockerfile           # Production build (distroless)
@@ -176,34 +185,58 @@ docker-compose up --build ai-agent -d
 
 ### AI Agent
 
-A FastAPI application built with Google's Agent Development Kit (ADK) that will orchestrate multiple AI agents to:
+A FastAPI application built with Google's Agent Development Kit (ADK) featuring a **sequential agent architecture**:
 
-- Understand natural language queries
-- Determine what data to retrieve
-- Generate appropriate responses (text or graphs)
-- Coordinate with the MCP Toolbox for data operations
+- **Retriever Agent**: Specializes in SQL query generation and database operations using MCP tools
+- **Presenter Agent**: Generates comprehensive analytical responses with interactive Vega-Lite visualizations
+- **Intelligent Routing**: Automatically determines whether to provide text analysis or visual charts
+- **Advanced Analytics**: Provides detailed insights, trend analysis, and business implications
+- **Chart Generation**: Creates bar charts, time series, and comparative visualizations using real data
 
-_Note: The agent implementation is currently in development and will be enhanced with multi-agent capabilities._
+**Capabilities:**
+
+- Natural language to SQL query translation
+- Comprehensive business KPI analysis
+- Customer, product, and sales analytics
+- Automatic chart generation with proper data formatting
+- Contextual analysis with business insights
 
 ### MCP Toolbox
 
-A Model Context Protocol server that exposes database tools and operations:
+A Model Context Protocol server that provides comprehensive database tools and analytics:
 
-- SQL query execution
-- Schema introspection
-- Data retrieval and analysis tools
+**Available Tools:**
+
+- `list-tables`: Database schema discovery and table information
+- `get-sales-kpis`: Key performance indicators and metrics
+- `get-monthly-sales-trend`: Time series sales analysis
+- `get-sales-by-category`: Product category performance
+- `get-sales-by-region`: Geographic sales distribution
+- `get-top-customers`: Customer ranking and analysis
+- `search-products`: Product information and search
+- `search-customers`: Customer lookup and details
+
+**Features:**
+
 - Secure database access layer
-
-_Note: Additional tools and capabilities are being developed._
+- Pre-built analytical queries
+- Schema introspection
+- Data validation and error handling
 
 ### Frontend
 
-A Streamlit-based chat interface that provides:
+A Streamlit-based chat interface with advanced features:
 
-- Natural language query input
-- Real-time streaming responses
-- Chat history
-- Interactive visualizations (coming soon)
+**Features:**
+
+- Natural language query input with chat interface
+- Real-time streaming responses with loading status
+- Interactive Vega-Lite chart rendering and visualization
+- Persistent chat history that survives page refreshes
+- Chart persistence across sessions
+- Function call transparency showing database operations
+- Error handling and validation for chart rendering
+- Responsive design with status indicators
 
 ## 🌐 Deployment
 
@@ -225,14 +258,33 @@ _Note: Cloud deployment infrastructure is currently in development._
 
 ## 📝 Usage Examples
 
-Once running, you can ask questions like:
+The system provides intelligent analysis with detailed insights and visualizations:
 
-- "Who is our biggest customer by total revenue?"
-- "Show me sales trends for the last quarter"
-- "What are our top performing products?"
-- "How many new customers did we acquire this month?"
+### Business Analytics Queries
 
-The AI agents will understand your query, fetch the appropriate data using SQL tools, and provide comprehensive answers with visualizations where appropriate.
+- **"Who is our biggest customer by total revenue?"**
+  - Provides detailed analysis with specific revenue figures, percentage of total business, and comparative insights
+- **"What was the revenue per month for January to July 2024?"**
+  - Generates interactive bar charts with monthly trends and identifies peak/low periods
+- **"Give me the top 2 customers who made the most purchases in 2024"**
+  - Creates comparative visualizations with detailed spending analysis and business relationship insights
+
+### Sample Response Types
+
+**Text Analysis:**
+
+```text
+TechCorp's biggest customer by total revenue is Cyberdyne Systems, with a total spend of $182,855.58. This highlights Cyberdyne Systems as a key account and a significant contributor to our overall revenue.
+```
+
+**Visual Analysis:**
+
+- Interactive charts showing trends, comparisons, and distributions
+- Detailed analytical insights explaining what the data reveals
+- Business implications and actionable recommendations
+- Comparative analysis with context and percentages
+
+The AI agents automatically determine whether to provide text analysis or visual charts based on the query type and data characteristics.
 
 ## 🔒 Security Notes
 
@@ -251,11 +303,13 @@ MIT - See the [LICENSE](LICENSE) file for details.
 
 ---
 
-**Status**: 🚧 Active Development
+**Status**: ✅ Production Ready
 
 - ✅ Docker orchestration and service setup
-- ✅ Basic frontend chat interface
-- 🚧 AI agent multi-agent system
-- 🚧 MCP toolbox SQL tools expansion
+- ✅ Advanced frontend chat interface with chart rendering
+- ✅ Sequential AI agent system with specialized retriever and presenter agents
+- ✅ Comprehensive MCP toolbox with SQL analytics tools
+- ✅ Interactive Vega-Lite chart generation and visualization
+- ✅ Persistent chat history and chart storage
+- ✅ Detailed analytical insights and business intelligence
 - 🚧 Cloud deployment infrastructure
-- 🔄 Graph generation and advanced visualizations
