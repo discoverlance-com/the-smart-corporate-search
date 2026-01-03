@@ -8,7 +8,8 @@ module "enable_apis" {
     "cloudtrace.googleapis.com",
     "sqladmin.googleapis.com",
     "servicenetworking.googleapis.com",
-    "compute.googleapis.com"
+    "compute.googleapis.com",
+    "secretmanager.googleapis.com"
   ]
 }
 
@@ -38,3 +39,4 @@ module "mcp_toolbox_account" {
 
   depends_on = [module.enable_apis]
 }
+

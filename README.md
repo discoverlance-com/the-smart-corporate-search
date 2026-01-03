@@ -35,7 +35,44 @@ This project consists of four main components that work together to deliver inte
 
 - Docker and Docker Compose
 - Google AI API Key (Gemini)
-- Your corporate data loaded into PostgreSQL
+- For cloud deployment: Google Cloud Project with billing enabled
+
+### Container Image Prerequisites
+
+Before deploying to the cloud, you'll need to build and push container images to Google Artifact Registry:
+
+1. **Create Artifact Registry repository**:
+   If you don't already have an artifact registry, create one
+
+   ```bash
+   gcloud artifacts repositories create smart-corporate-search \
+     --repository-format=docker \
+     --location=us-central1 \
+     --description="Docker repository for smart corporate search application"
+   ```
+
+2. **Build and push images for each service**:
+
+   **AI Agent**:
+
+   ```bash
+   gcloud builds submit ai-agent/ \
+     --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/smart-corporate-search/ai-agent:latest
+   ```
+
+   **Frontend**:
+
+   ```bash
+   gcloud builds submit frontend/ \
+     --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/smart-corporate-search/frontend:latest
+   ```
+
+   **MCP Toolbox**:
+
+   ```bash
+   gcloud builds submit mcp-toolbox/ \
+     --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/smart-corporate-search/mcp-toolbox:latest
+   ```
 
 ### Setup
 
@@ -244,17 +281,52 @@ A Streamlit-based chat interface with advanced features:
 
 Use the provided Docker Compose setup for local development and testing.
 
-### Cloud Infrastructure (Coming Soon)
+### Cloud Infrastructure
 
 The `iac/` directory contains Terraform configurations for deploying to Google Cloud Platform:
 
-- Cloud Run services
-- Cloud SQL databases
-- Artifact Registry
-- IAM configurations
-- Secret Management
+#### Current Infrastructure Components
 
-_Note: Cloud deployment infrastructure is currently in development._
+- **Service Accounts**: Creates dedicated service accounts for each service
+- **APIs**: Enables required Google Cloud APIs for the application
+
+#### Infrastructure Setup
+
+1. Navigate to the infrastructure directory:
+
+   ```bash
+   cd iac
+   ```
+
+2. Initialize Terraform:
+
+   ```bash
+   terraform init
+   ```
+
+3. Update terraform.auto.tfvars with your project details:
+
+   ```hcl
+   project_id = "your-gcp-project-id"
+   region = "us-central1"
+   zone = "us-central1-a"
+   ```
+
+4. Deploy the infrastructure:
+
+   ```bash
+   terraform plan
+   terraform apply
+   ```
+
+#### TBD Infrastructure Components
+
+The following components are planned for future implementation:
+
+- **Cloud Run Services**: TBD
+- **Cloud SQL Database**: TBD
+- **Secret Manager**: TBD
+- **VPC Network**: TBD
 
 ## 📝 Usage Examples
 
