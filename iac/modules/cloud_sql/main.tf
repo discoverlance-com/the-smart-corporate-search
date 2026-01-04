@@ -85,7 +85,7 @@ resource "google_sql_user" "iam_service_account_users" {
   }
 
   # Database username must be the full email address in lowercase
-  name = lower(replace(each.value, "serviceAccount:", ""))
+  name = replace(lower(replace(each.value, "serviceAccount:", "")), ".gserviceaccount.com", "")
 
   instance = google_sql_database_instance.instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"

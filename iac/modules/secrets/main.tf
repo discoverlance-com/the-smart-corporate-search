@@ -9,8 +9,6 @@ resource "google_secret_manager_secret" "secrets" {
     each.value.labels
   )
 
-  annotations = each.value.annotations
-
   # Use regional replication in us-central1
   replication {
     user_managed {
@@ -20,20 +18,8 @@ resource "google_secret_manager_secret" "secrets" {
     }
   }
 
-  # Optional TTL configuration
-  version_destroy_ttl = each.value.version_destroy_ttl
-
   # Prevent accidental deletion in production
   deletion_protection = each.value.deletion_protection
-
-  # Optional expiration
-  dynamic "rotation" {
-    for_each = each.value.rotation != null ? [each.value.rotation] : []
-    content {
-      next_rotation_time = rotation.value.next_rotation_time
-      rotation_period    = rotation.value.rotation_period
-    }
-  }
 }
 
 # Grant secret accessor role to specified service accounts

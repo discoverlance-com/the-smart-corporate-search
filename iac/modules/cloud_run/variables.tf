@@ -11,7 +11,7 @@ variable "region" {
   description = "The region where the Cloud Run service will be deployed"
   type        = string
   validation {
-    condition     = can(regex("^[a-z]+-[a-z0-9]+-[a-z]$", var.region))
+    condition     = can(regex("^[a-z]+-[a-z0-9-]+[0-9]$", var.region))
     error_message = "Region must be a valid Google Cloud region format (e.g., us-central1)."
   }
 }

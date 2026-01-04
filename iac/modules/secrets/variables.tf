@@ -18,18 +18,9 @@ variable "secrets" {
   type = map(object({
     secret_id           = string
     labels              = optional(map(string), {})
-    annotations         = optional(map(string), {})
-    version_destroy_ttl = optional(string, null)
     deletion_protection = optional(bool, true)
     accessor_members    = optional(list(string), [])
-    secret_data         = optional(string, null)
-    version_enabled     = optional(bool, true)
-    rotation = optional(object({
-      next_rotation_time = string
-      rotation_period    = string
-    }), null)
   }))
-  sensitive = true
   validation {
     condition = alltrue([
       for secret_key, secret in var.secrets : length(secret.secret_id) > 0 && length(secret.secret_id) <= 255

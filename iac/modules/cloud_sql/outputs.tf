@@ -44,9 +44,8 @@ output "iam_service_account_users" {
   description = "Map of created IAM service account SQL users"
   value = {
     for user_key, user in google_sql_user.iam_service_account_users : user_key => {
-      name      = user.name
-      type      = user.type
-      self_link = user.self_link
+      name = user.name
+      type = user.type
     }
   }
 }
@@ -55,9 +54,8 @@ output "iam_sql_users" {
   description = "Map of created IAM SQL users"
   value = {
     for user_key, user in google_sql_user.iam_users : user_key => {
-      name      = user.name
-      type      = user.type
-      self_link = user.self_link
+      name = user.name
+      type = user.type
     }
   }
 }

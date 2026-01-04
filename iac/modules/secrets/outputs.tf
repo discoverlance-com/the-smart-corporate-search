@@ -24,16 +24,3 @@ output "secret_ids" {
     for secret_key, secret in google_secret_manager_secret.secrets : secret_key => secret.secret_id
   }
 }
-
-output "secret_versions" {
-  description = "Map of created secret versions with their details"
-  value = {
-    for secret_key, version in google_secret_manager_secret_version.secret_versions : secret_key => {
-      name         = version.name
-      version      = version.version
-      create_time  = version.create_time
-      destroy_time = version.destroy_time
-      enabled      = version.enabled
-    }
-  }
-}
