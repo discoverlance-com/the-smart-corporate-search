@@ -283,19 +283,53 @@ Use the provided Docker Compose setup for local development and testing.
 
 ### Cloud Infrastructure
 
-The `iac/` directory contains Terraform configurations for deploying to Google Cloud Platform:
+The `iac/` directory contains Terraform configurations for deploying to Google Cloud Platform using a **two-environment approach**:
 
-#### Current Infrastructure Components
+#### Foundation Environment (`iac/foundation/`)
 
-- **Service Accounts**: Creates dedicated service accounts for each service
-- **APIs**: Enables required Google Cloud APIs for the application
+Sets up the core infrastructure that other resources depend on:
 
-#### Infrastructure Setup
+- **VPC Network**: Private network with subnet for Cloud Run services
+- **Cloud SQL**: PostgreSQL database with private service access (development tier)
+- **Service Accounts**: Dedicated accounts for each service with appropriate permissions
+- **Artifact Registry**: Docker repository for container images
+- **Secret Manager**: Regional secrets for database connection (no rotation)
+- **APIs**: Enables all required Google Cloud APIs
 
-1. Navigate to the infrastructure directory:
+#### Runtime Environment (`iac/runtime/`)
+
+Deploys the Cloud Run services that make up the application:
+
+**Services:**
+
+- **Frontend Service** - Streamlit web interface (public access)
+  - Resources: 1 CPU, 512Mi memory, scaling 0-2 instances
+  - Port: 8501, public access via `allUsers`
+- **AI Agent Service** - FastAPI backend with AI processing (internal access)
+  - Resources: 2 CPU, 2Gi memory, scaling 0-2 instances
+  - Port: 8000, internal only (invoked by frontend)
+  - Database: Connected to Cloud SQL via IAM authentication
+- **MCP Toolbox Service** - Tool server with database access (internal access)
+  - Resources: 1 CPU, 1Gi memory, scaling 0-10 instances
+  - Port: 8080, internal only (invoked by AI agent)
+  - Database: Connected to Cloud SQL with direct connection attachment
+
+**Networking & Security:**
+
+- All services use direct VPC egress for private networking
+- Services connect to Cloud SQL via private IP addresses
+- IAM-based authentication for service-to-service communication
+- Frontend is publicly accessible, backend services are internal-only
+- Database authentication uses IAM (no passwords required)
+
+#### Infrastructure Setup Process
+
+##### Step 1: Deploy Foundation
+
+1. Navigate to the foundation directory:
 
    ```bash
-   cd iac
+   cd iac/foundation
    ```
 
 2. Initialize Terraform:
@@ -304,29 +338,122 @@ The `iac/` directory contains Terraform configurations for deploying to Google C
    terraform init
    ```
 
-3. Update terraform.auto.tfvars with your project details:
+3. **IMPORTANT**: Create and configure terraform.auto.tfvars with your project details:
 
-   ```hcl
-   project_id = "your-gcp-project-id"
-   region = "us-central1"
-   zone = "us-central1-a"
+   ```bash
+   # Create the terraform.auto.tfvars file if it doesn't exist
+   touch terraform.auto.tfvars
    ```
 
-4. Deploy the infrastructure:
+   Then edit the file with your project configuration:
+
+   ```hcl
+   project_id = "your-gcp-project-id"  # REQUIRED: Your actual GCP project ID
+   region = "us-central1"
+   zone = "us-central1-a"
+
+   # Optional: Customize resource names (defaults provided)
+   artifact_registry_name = "smart-corporate-search"
+   cloud_sql_instance_name = "corporate-search-db"
+   cloud_sql_database_name = "corporate_data"
+   ```
+
+   > **⚠️ Required Configuration**: You MUST set your actual GCP project ID in the `project_id` variable before running terraform commands.
+
+4. Deploy the foundation:
 
    ```bash
    terraform plan
    terraform apply
    ```
 
-#### TBD Infrastructure Components
+##### Step 2: Build and Push Container Images
 
-The following components are planned for future implementation:
+After foundation deployment, build and push images to the created Artifact Registry:
 
-- **Cloud Run Services**: TBD
-- **Cloud SQL Database**: TBD
-- **Secret Manager**: TBD
-- **VPC Network**: TBD
+```bash
+# Get your artifact registry URL format
+REGISTRY="us-central1-docker.pkg.dev/YOUR_PROJECT_ID/smart-corporate-search"
+
+# Build and push AI Agent
+gcloud builds submit ai-agent/ --tag $REGISTRY/ai-agent:latest
+
+# Build and push Frontend
+gcloud builds submit frontend/ --tag $REGISTRY/frontend:latest
+
+# Build and push MCP Toolbox
+gcloud builds submit mcp-toolbox/ --tag $REGISTRY/mcp-toolbox:latest
+```
+
+##### Step 3: Create Google API Key Secret
+
+Before deploying the runtime, you need to create the Google API Key secret:
+
+```bash
+# Set your Google API Key in the secret (replace with your actual API key)
+echo -n "YOUR_GOOGLE_API_KEY_HERE" | gcloud secrets versions add google-api-key --data-file=-
+
+# if you are using powershell, run the following
+# Save the secret to a temp file
+"YOUR_GOOGLE_API_KEY_HERE" | Out-File -Encoding ASCII temp_secret.txt -NoNewline
+
+# Add it as a new version
+gcloud secrets versions add google-api-key --data-file="temp_secret.txt"
+
+# Clean up
+Remove-Item temp_secret.txt
+```
+
+##### Step 4: Deploy Runtime
+
+After building and pushing container images, deploy the runtime services:
+
+```bash
+cd iac/runtime
+terraform init
+```
+
+Configure the runtime with container image URLs in `terraform.auto.tfvars`:
+
+```hcl
+project_id = "your-gcp-project-id"  # REQUIRED: Same project ID as foundation
+region = "us-west1"
+
+# Container Images (update with your actual image URLs)
+frontend_container_image     = "us-west1-docker.pkg.dev/your-project/smart-corporate-search/frontend:latest"
+ai_agent_container_image     = "us-west1-docker.pkg.dev/your-project/smart-corporate-search/ai-agent:latest"
+mcp_toolbox_container_image  = "us-west1-docker.pkg.dev/your-project/smart-corporate-search/mcp-toolbox:latest"
+```
+
+> **⚠️ Required Configuration**: You MUST set container image URLs in `terraform.auto.tfvars` before deploying runtime resources. Use the artifact registry URL from your foundation deployment.
+
+Deploy the runtime:
+
+```bash
+terraform plan
+terraform apply
+```
+
+After deployment, you'll get service URLs for accessing your application:
+
+- Frontend service URL (publicly accessible)
+- AI Agent service URL (internal)
+- MCP Toolbox service URL (internal)
+
+#### Configurable Variables
+
+The foundation environment supports customization through variables:
+
+| Variable                         | Default                        | Description                    |
+| -------------------------------- | ------------------------------ | ------------------------------ |
+| `artifact_registry_name`         | `smart-corporate-search`       | Name of the Docker repository  |
+| `cloud_sql_instance_name`        | `corporate-search-db`          | Cloud SQL instance name        |
+| `cloud_sql_database_name`        | `corporate_data`               | Database name                  |
+| `vpc_name`                       | `corporate-search-vpc`         | VPC network name               |
+| `subnet_name`                    | `corporate-search-subnet`      | Subnet name                    |
+| `frontend_service_account_id`    | `corporate-agent-frontend-svc` | Frontend service account ID    |
+| `ai_agent_service_account_id`    | `corporate-agent-ai-agent-svc` | AI Agent service account ID    |
+| `mcp_toolbox_service_account_id` | `corporate-agent-mcp-svc`      | MCP Toolbox service account ID |
 
 ## 📝 Usage Examples
 
@@ -384,4 +511,5 @@ MIT - See the [LICENSE](LICENSE) file for details.
 - ✅ Interactive Vega-Lite chart generation and visualization
 - ✅ Persistent chat history and chart storage
 - ✅ Detailed analytical insights and business intelligence
-- 🚧 Cloud deployment infrastructure
+- ✅ Foundation infrastructure with VPC, Cloud SQL, and service accounts
+- ✅ Runtime Cloud Run services with auto-scaling and IAM authentication
