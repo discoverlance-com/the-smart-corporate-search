@@ -417,12 +417,12 @@ Configure the runtime with container image URLs in `terraform.auto.tfvars`:
 
 ```hcl
 project_id = "your-gcp-project-id"  # REQUIRED: Same project ID as foundation
-region = "us-west1"
+region = "us-central1"
 
 # Container Images (update with your actual image URLs)
-frontend_container_image     = "us-west1-docker.pkg.dev/your-project/smart-corporate-search/frontend:latest"
-ai_agent_container_image     = "us-west1-docker.pkg.dev/your-project/smart-corporate-search/ai-agent:latest"
-mcp_toolbox_container_image  = "us-west1-docker.pkg.dev/your-project/smart-corporate-search/mcp-toolbox:latest"
+frontend_container_image     = "us-central1-docker.pkg.dev/your-project/smart-corporate-search/frontend:latest"
+ai_agent_container_image     = "us-central1-docker.pkg.dev/your-project/smart-corporate-search/ai-agent:latest"
+mcp_toolbox_container_image  = "us-central1-docker.pkg.dev/your-project/smart-corporate-search/mcp-toolbox:latest"
 ```
 
 > **⚠️ Required Configuration**: You MUST set container image URLs in `terraform.auto.tfvars` before deploying runtime resources. Use the artifact registry URL from your foundation deployment.
