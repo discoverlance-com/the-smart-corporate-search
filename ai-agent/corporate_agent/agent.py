@@ -23,17 +23,16 @@ def get_toolbox_client():
         raise ValueError(
             "MCP_TOOLBOX_SERVICE_URL environment variable is required")
 
-    try:
-        # Try without authentication first (for local development)
+    if os.getenv("ENVIRONMENT") == "local":
+        # Local development without authentication
         return ToolboxSyncClient(url=MCP_TOOLBOX_SERVICE_URL)
-    except Exception:
-        # Use fresh auth token for each request (handles token expiration)
-        auth_token_provider = auth_methods.get_google_id_token(
-            MCP_TOOLBOX_SERVICE_URL)
-        return ToolboxSyncClient(
-            url=MCP_TOOLBOX_SERVICE_URL,
-            client_headers={"Authorization": auth_token_provider}
-        )
+    # Use fresh auth token for each request (handles token expiration)
+    auth_token_provider = auth_methods.get_google_id_token(
+        MCP_TOOLBOX_SERVICE_URL)
+    return ToolboxSyncClient(
+        url=MCP_TOOLBOX_SERVICE_URL,
+        client_headers={"Authorization": auth_token_provider}
+    )
 
 
 def get_sql_toolset():

@@ -59,6 +59,7 @@ services:
       GEMINI_PRESENTER_MODEL_NAME: "gemini-2.5-flash"
       COMPANY_NAME: "TechCorp"
       MCP_TOOLBOX_SERVICE_URL: http://mcp-toolbox:8081
+      ENVIRONMENT: "local"
     ports:
       - "8080:8080"
     command:
