@@ -112,8 +112,8 @@ docker-compose up --build ai-agent -d
 
 ### Development Dockerfiles
 
-- **AI Agent**: Uses production `Dockerfile` (watch-incompatible)
-- **Frontend**: Uses `Dockerfile.dev` for watch compatibility (production uses distroless)
+- **AI Agent**: Uses production `Dockerfile` with Python 3.13-slim base (port 8080)
+- **Frontend**: Uses `Dockerfile.dev` for development with watch compatibility, production `Dockerfile` uses standard Python 3.13-slim (port 8501)
 - **MCP Toolbox**: Uses pre-built image (no local development needed)
 
 ### Service Dependencies
@@ -168,7 +168,7 @@ docker-compose up --build ai-agent -d
 │       ├── models.py        # Pydantic models for structured responses
 │       └── .env            # Google API key configuration
 ├── frontend/                # Streamlit frontend
-│   ├── Dockerfile           # Production build (distroless)
+│   ├── Dockerfile           # Production build (Python 3.13-slim)
 │   ├── Dockerfile.dev       # Development build (watch-compatible)
 │   ├── streamlit_app.py     # Chat interface
 │   └── requirements.txt
@@ -256,7 +256,7 @@ Sets up the core infrastructure that other resources depend on:
 - **Cloud SQL**: PostgreSQL database with private service access (development tier)
 - **Service Accounts**: Dedicated accounts for each service with appropriate permissions
 - **Artifact Registry**: Docker repository for container images
-- **Secret Manager**: Regional secrets for database connection (no rotation)
+- **Secret Manager**: Regional secrets including Google API Key and MCP tools configuration
 - **APIs**: Enables all required Google Cloud APIs
 
 #### Runtime Environment (`iac/runtime/`)
@@ -270,7 +270,7 @@ Deploys the Cloud Run services that make up the application:
   - Port: 8501, public access via `allUsers`
 - **AI Agent Service** - FastAPI backend with AI processing (internal access)
   - Resources: 2 CPU, 2Gi memory, scaling 0-2 instances
-  - Port: 8000, internal only (invoked by frontend)
+  - Port: 8080, internal only (invoked by frontend)
   - Database: Connected to Cloud SQL via IAM authentication
 - **MCP Toolbox Service** - Tool server with database access (internal access)
   - Resources: 1 CPU, 1Gi memory, scaling 0-10 instances
@@ -280,10 +280,13 @@ Deploys the Cloud Run services that make up the application:
 **Networking & Security:**
 
 - All services use direct VPC egress for private networking
-- Services connect to Cloud SQL via private IP addresses
+- Services connect to Cloud SQL via private IP addresses within VPC
 - IAM-based authentication for service-to-service communication
 - Frontend is publicly accessible, backend services are internal-only
 - Database authentication uses IAM (no passwords required)
+- **Secret Management**: Configuration files (tools.yaml) and API keys mounted as volumes in containers
+- **Service Communication**: AI Agent communicates with MCP Toolbox via internal VPC networking
+- **VPC Configuration**: Private subnet with Google Private Access enabled for secure Cloud SQL connectivity
 
 #### Infrastructure Setup Process
 
@@ -338,7 +341,7 @@ The foundation environment creates all core infrastructure including the Artifac
    - Cloud SQL PostgreSQL instance
    - Service accounts for each service
    - **Artifact Registry repository** for container images
-   - Google API Key secret in Secret Manager
+   - **Secret Manager secrets**: `google-api-key` and `mcp-tools-config` (empty, to be populated later)
 
 ##### Step 2: Build and Push Container Images
 
@@ -368,7 +371,7 @@ gcloud builds submit mcp-toolbox/ --tag $REGISTRY/mcp-toolbox:latest
 Before deploying the runtime, you need to create the required secrets:
 
 ```bash
-# Add the MCP tools configuration
+# Add the MCP tools configuration (this gets mounted as a volume in containers)
 gcloud secrets versions add mcp-tools-config --data-file="mcp-toolbox/tools.yaml"
 
 # Set your Google API Key in the secret (replace with your actual API key)
@@ -384,6 +387,8 @@ gcloud secrets versions add google-api-key --data-file="temp_secret.txt"
 # Clean up
 Remove-Item temp_secret.txt
 ```
+
+> **💡 Important**: The `mcp-tools-config` secret contains the `tools.yaml` file that gets mounted as a volume in the MCP Toolbox container, enabling it to connect to Cloud SQL with proper IAM authentication.
 
 ##### Step 4: Deploy Runtime
 
