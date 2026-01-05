@@ -1,4 +1,3 @@
-# Cloud SQL instance with private networking
 resource "google_sql_database_instance" "instance" {
   name             = var.instance_name
   project          = var.project_id
@@ -11,13 +10,11 @@ resource "google_sql_database_instance" "instance" {
     tier    = var.tier
     edition = var.edition
 
-    # Enable IAM authentication
     database_flags {
       name  = "cloudsql.iam_authentication"
       value = "on"
     }
 
-    # Private IP configuration
     ip_configuration {
       ipv4_enabled                                  = var.ipv4_enabled
       private_network                               = var.private_network
@@ -25,7 +22,6 @@ resource "google_sql_database_instance" "instance" {
       enable_private_path_for_google_cloud_services = var.enable_private_path_for_google_cloud_services
       ssl_mode                                      = var.ssl_mode
 
-      # Authorized networks for public access (if enabled)
       dynamic "authorized_networks" {
         for_each = var.authorized_networks
         content {
@@ -36,7 +32,6 @@ resource "google_sql_database_instance" "instance" {
       }
     }
 
-    # Availability type (REGIONAL for HA, ZONAL for single zone)
     availability_type = var.availability_type
 
     disk_size             = var.disk_size
@@ -44,7 +39,6 @@ resource "google_sql_database_instance" "instance" {
     disk_autoresize       = var.disk_autoresize
     disk_autoresize_limit = var.disk_autoresize_limit
 
-    # User labels
     user_labels = var.user_labels
   }
 }

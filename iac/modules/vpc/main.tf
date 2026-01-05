@@ -1,7 +1,7 @@
 resource "google_compute_network" "vpc_network" {
   name                    = var.network_name
   description             = var.description
-  auto_create_subnetworks = false # We'll create subnets explicitly
+  auto_create_subnetworks = false
   routing_mode            = var.routing_mode
   project                 = var.project_id
 }

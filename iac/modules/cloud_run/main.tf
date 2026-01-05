@@ -1,4 +1,3 @@
-# Cloud Run v2 service
 resource "google_cloud_run_v2_service" "service" {
   name                = var.service_name
   project             = var.project_id
@@ -6,14 +5,13 @@ resource "google_cloud_run_v2_service" "service" {
   description         = var.description
   deletion_protection = var.deletion_protection
 
-  # Ingress configuration
   ingress = var.ingress
 
-  # Labels and annotations
+  invoker_iam_disabled = var.invoker_iam_disabled
+
   labels      = var.labels
   annotations = var.annotations
 
-  # Service-level scaling configuration
   dynamic "scaling" {
     for_each = var.scaling != null ? [var.scaling] : []
     content {
@@ -24,12 +22,9 @@ resource "google_cloud_run_v2_service" "service" {
     }
   }
 
-  # Template configuration
   template {
-    # Service account
     service_account = var.service_account
 
-    # Template-level scaling
     dynamic "scaling" {
       for_each = var.template_scaling != null ? [var.template_scaling] : []
       content {
@@ -38,10 +33,8 @@ resource "google_cloud_run_v2_service" "service" {
       }
     }
 
-    # Timeout
     timeout = var.timeout
 
-    # Labels and annotations for the revision template
     labels      = var.template_labels
     annotations = var.template_annotations
 
@@ -87,14 +80,12 @@ resource "google_cloud_run_v2_service" "service" {
         working_dir = containers.value.working_dir
         depends_on  = containers.value.depends_on
 
-        # Environment variables
         dynamic "env" {
           for_each = containers.value.env != null ? containers.value.env : []
           content {
             name  = env.value.name
             value = env.value.value
 
-            # Secret value source
             dynamic "value_source" {
               for_each = env.value.value_source != null ? [env.value.value_source] : []
               content {

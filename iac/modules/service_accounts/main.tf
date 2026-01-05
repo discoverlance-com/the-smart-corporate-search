@@ -7,7 +7,6 @@ resource "google_service_account" "service_account" {
   create_ignore_already_exists = var.create_ignore_already_exists
 }
 
-# Grant roles to the service account
 resource "google_project_iam_member" "service_account_roles" {
   for_each = toset(var.roles)
 

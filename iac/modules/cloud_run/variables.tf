@@ -328,3 +328,9 @@ variable "invoker_members" {
     error_message = "Invoker members must be valid IAM member identifiers."
   }
 }
+
+variable "invoker_iam_disabled" {
+  description = "Whether to disable IAM authentication for the service (allows unauthenticated access)"
+  type        = bool
+  default     = false
+}
