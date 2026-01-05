@@ -10,11 +10,11 @@ module "enable_apis" {
     "servicenetworking.googleapis.com",
     "compute.googleapis.com",
     "artifactregistry.googleapis.com",
-    "secretmanager.googleapis.com"
+    "secretmanager.googleapis.com",
+    "cloudtrace.googleapis.com"
   ]
 }
 
-# VPC Network and Subnet
 module "vpc" {
   source = "../modules/vpc"
 
@@ -35,7 +35,6 @@ module "vpc" {
   depends_on = [module.enable_apis]
 }
 
-# Private Service Access for Cloud SQL
 resource "google_compute_global_address" "private_ip_address" {
   name          = "psa-cloudsql-range"
   purpose       = "VPC_PEERING"
@@ -57,7 +56,6 @@ resource "google_service_networking_connection" "private_vpc_connection" {
   depends_on = [google_compute_global_address.private_ip_address]
 }
 
-# Service Accounts
 module "frontend_service_account" {
   source       = "../modules/service_accounts"
   account_id   = var.frontend_service_account_id
@@ -66,6 +64,8 @@ module "frontend_service_account" {
 
   roles = [
     "roles/logging.logWriter",
+    "roles/cloudtrace.agent",
+    "roles/monitoring.metricWriter"
   ]
 
   depends_on = [module.enable_apis]
@@ -79,6 +79,8 @@ module "ai_agent_service_account" {
 
   roles = [
     "roles/logging.logWriter",
+    "roles/cloudtrace.agent",
+    "roles/monitoring.metricWriter"
   ]
 
   depends_on = [module.enable_apis]
@@ -92,12 +94,13 @@ module "mcp_toolbox_service_account" {
 
   roles = [
     "roles/logging.logWriter",
+    "roles/cloudtrace.agent",
+    "roles/monitoring.metricWriter"
   ]
 
   depends_on = [module.enable_apis]
 }
 
-# Artifact Registry
 resource "google_artifact_registry_repository" "app_repo" {
   repository_id = var.artifact_registry_name
   location      = var.region
@@ -112,7 +115,6 @@ resource "google_artifact_registry_repository" "app_repo" {
   depends_on = [module.enable_apis]
 }
 
-# Cloud SQL
 module "cloud_sql" {
   source = "../modules/cloud_sql"
 
@@ -123,18 +125,15 @@ module "cloud_sql" {
   tier                = "db-g1-small"
   deletion_protection = false
 
-  # Network configuration for private access
   private_network = module.vpc.network_self_link
   ipv4_enabled    = false
 
-  # Database configuration
   databases = {
     main = {
       name = var.cloud_sql_database_name
     }
   }
 
-  # IAM users for database access
   iam_users = [
     "serviceAccount:${module.mcp_toolbox_service_account.service_account_email}"
   ]
@@ -142,7 +141,6 @@ module "cloud_sql" {
   depends_on = [module.enable_apis, module.vpc, google_service_networking_connection.private_vpc_connection]
 }
 
-# Google API Key Secret using secrets module
 module "google_api_key_secret" {
   source = "../modules/secrets"
 
@@ -159,6 +157,17 @@ module "google_api_key_secret" {
       }
       accessor_members = [
         "serviceAccount:${module.ai_agent_service_account.service_account_email}"
+      ]
+    }
+    mcp_tools_config = {
+      secret_id           = "mcp-tools-config"
+      deletion_protection = false
+      labels = {
+        service = "mcp-toolbox"
+        env     = "foundation"
+      }
+      accessor_members = [
+        "serviceAccount:${module.mcp_toolbox_service_account.service_account_email}"
       ]
     }
   }

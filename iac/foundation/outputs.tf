@@ -78,3 +78,9 @@ output "google_api_key_secret_id" {
   description = "The ID of the Google API Key secret"
   value       = module.google_api_key_secret.secret_ids["google_api_key"]
 }
+
+# MCP Tools Config Secret
+output "mcp_tools_config_secret_id" {
+  description = "The ID of the MCP tools config secret"
+  value       = module.google_api_key_secret.secret_ids["mcp_tools_config"]
+}
