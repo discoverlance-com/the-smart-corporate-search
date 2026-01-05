@@ -1,28 +1,15 @@
-# Builder Stage
-FROM python:3.13-slim AS builder
+FROM python:3.13-slim
+
 WORKDIR /app
 
 COPY requirements.txt .
-COPY .streamlit/config.toml .
-RUN pip install --no-cache-dir -r requirements.txt -t /app/site-packages
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY streamlit_app.py /app/streamlit_app.py
+COPY streamlit_app.py .
+COPY .streamlit/config.toml .streamlit/config.toml
 
-# Runtime Stage
-FROM gcr.io/distroless/python3-debian12
-
-WORKDIR /app
-ENV PYTHONPATH=/app/site-packages
 ENV PYTHONUNBUFFERED=1
-
-COPY --from=builder /app/site-packages /app/site-packages
-COPY --from=builder /app/streamlit_app.py /app/streamlit_app.py
-COPY --from=builder /app/config.toml /app/.streamlit/config.toml
-
-USER nonroot
 
 EXPOSE 8501
 
-# we cannot execute the 'streamlit' binary in distroless
-# we instead execute the 'streamlit' module directly with -m
-CMD ["-m", "streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
