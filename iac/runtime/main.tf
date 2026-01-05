@@ -56,7 +56,7 @@ module "frontend_service" {
     }]
   }
 
-  deletion_protection = false
+  deletion_protection = false # enable delete protection in production
 
   # Labels
   labels = {

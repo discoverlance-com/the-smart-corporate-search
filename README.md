@@ -622,7 +622,71 @@ Remove-Item temp_secret.txt
 
 > **💡 Important**: The `mcp-tools-config` secret contains the `tools.yaml` file that gets mounted as a volume in the MCP Toolbox container, enabling it to connect to Cloud SQL with proper IAM authentication.
 
-##### Step 4: Deploy Runtime
+##### Step 4: Create Database User and Seed Database
+
+Before deploying the runtime, you need to set up the database schema and grant permissions to your service accounts:
+
+**4.1. Create a temporary database user for Cloud SQL Studio:**
+
+```bash
+# Connect to your Cloud SQL instance and create a temporary user
+gcloud sql users create temp-admin \
+  --instance=corporate-search-db \
+  --password=temp-password-123
+```
+
+**4.2. Set up database schema using Cloud SQL Studio:**
+
+1. **Open Cloud SQL Studio** in the Google Cloud Console:
+
+   - Navigate to Cloud SQL → Your instance (`corporate-search-db`) → Cloud SQL Studio
+   - Connect using the `temp-admin` user you just created
+
+2. **Prepare the init.sql file:**
+
+   - Open `mcp-toolbox/init.sql` in your local editor
+   - **IMPORTANT**: Scroll to the bottom and uncomment the GRANT statements (lines 129-138)
+   - Replace `mcpuser` with your MCP Toolbox service account name **without** the `.gserviceaccount.com` suffix
+
+   For example, if your service account is `corporate-agent-mcp-svc@your-project.iam.gserviceaccount.com`, use:
+
+   ```sql
+   -- Uncomment and update these lines:
+   GRANT USAGE ON SCHEMA public TO "corporate-agent-mcp-svc@your-project.iam";
+
+   GRANT ALL PRIVILEGES ON TABLE public.sales TO "corporate-agent-mcp-svc@your-project.iam";
+   GRANT ALL PRIVILEGES ON TABLE public.products TO "corporate-agent-mcp-svc@your-project.iam";
+   GRANT ALL PRIVILEGES ON TABLE public.customers TO "corporate-agent-mcp-svc@your-project.iam";
+   ```
+
+3. **Execute the SQL script:**
+
+   - Copy the entire contents of your modified `init.sql` file
+   - Paste and run it in Cloud SQL Studio
+   - This will create tables, seed data, and grant permissions to your service accounts
+
+4. **Verify the setup:**
+
+   ```sql
+   -- Check that tables were created
+   \dt
+
+   -- Verify data was inserted
+   SELECT COUNT(*) FROM sales;
+   SELECT COUNT(*) FROM products;
+   SELECT COUNT(*) FROM customers;
+   ```
+
+**4.3. Clean up temporary user (optional but recommended):**
+
+```bash
+# Remove the temporary user after setup
+gcloud sql users delete temp-admin --instance=corporate-search-db
+```
+
+> **💡 Alternative**: If you have PostgreSQL client tools installed locally, you can connect via Cloud SQL Proxy and run the init.sql file directly: `psql -h 127.0.0.1 -p 5432 -U postgres -d corporate_data -f mcp-toolbox/init.sql`
+
+##### Step 5: Deploy Runtime
 
 After building and pushing container images and creating the required secrets, deploy the runtime services:
 
@@ -709,6 +773,82 @@ The AI agents automatically determine whether to provide text analysis or visual
 - Database access is containerized and isolated
 - CORS is configured for secure frontend-backend communication
 - All services run in isolated Docker containers
+
+## 🚨 Troubleshooting
+
+### Infrastructure Deployment Issues
+
+#### Cloud SQL User Deletion Error During Destroy
+
+**Error Message:**
+
+```
+Error: Error, failed to deleteuser corporate-agent-mcp-svc@...iam: Error 400: Invalid request: failed to delete user corporate-agent-mcp-svc@...iam: . role "..." cannot be dropped because some objects depend on it Details: 4 objects in database corporate_data., invalid
+```
+
+**Root Cause:**
+
+Cloud SQL IAM database users are implemented as PostgreSQL roles.
+PostgreSQL does not allow a role to be dropped if it still owns database objects or has active privileges.
+
+Terraform does not manage database object ownership, so during destroy it may attempt to delete the IAM DB user before all dependent tables or grants are removed.
+
+**Recommended Resolution (Deterministic):**
+
+1. **Manually clean up database ownership and privileges before destroying the IAM DB user:**
+
+   ```bash
+   # Connect to Cloud SQL and clean up manually
+   gcloud sql connect corporate-search-db --user=postgres --database=corporate_data
+
+   # In the SQL prompt, revoke privileges (replace with your actual service account):
+   REVOKE ALL PRIVILEGES ON TABLE public.sales FROM "corporate-agent-mcp-svc@your-project.iam";
+   REVOKE ALL PRIVILEGES ON TABLE public.products FROM "corporate-agent-mcp-svc@your-project.iam";
+   REVOKE ALL PRIVILEGES ON TABLE public.customers FROM "corporate-agent-mcp-svc@your-project.iam";
+   REVOKE USAGE ON SCHEMA public FROM "corporate-agent-mcp-svc@your-project.iam";
+
+   # Then drop the user
+   DROP USER "corporate-agent-mcp-svc@your-project.iam";
+   ```
+
+**Optional Workaround:**
+
+In some cases, running terraform destroy a second time may succeed after dependent resources are removed. This behavior is not guaranteed and should not be relied upon.
+
+#### VPC Subnet Deletion Error
+
+**Error Message:**
+
+```text
+Error: The subnetwork resource '...' is already being used by '...serverless-ipv4-...', resourceInUseByAnotherResource
+```
+
+In the Foundation, terraform destroy may fail when deleting VPC subnets with an error indicating the subnet is still in use by a serverless-ipv4-\* address.
+
+This happens because Cloud Run automatically creates serverless-managed IP reservations that are cleaned up asynchronously by Google Cloud after the services are deleted. These resources are not visible or deletable by Terraform or gcloud.
+
+**Solution:**
+
+1. Ensure runtime environment is completely destroyed first: `cd iac/runtime && terraform destroy`
+2. Wait for a few hours (typically 2-6 hours) for serverless connectors to be fully cleaned up
+3. Then destroy foundation: `cd iac/foundation && terraform destroy`
+
+Once Google Cloud completes its background cleanup, the destroy operation will succeed. At this point most of the resources including Cloud SQL would have been cleared except the vpc and api resources so you should be good to wait for the serverless ip to be deleted without incurring cost.
+
+**NOTE**: You can also check on Google Cloud Console >> IP addresses to see whether the address mentioned, serverless-ipv4-\* is still around after a few hours before running the destroy again.
+
+### Application Issues
+
+#### MCP Toolbox Database Connection Errors
+
+**Symptoms:** AI Agent can't connect to MCP Toolbox, database query failures
+
+**Checklist:**
+
+- ✅ Verify `mcp-tools-config` secret contains the correct `tools.yaml` configuration
+- ✅ Check that database permissions were granted correctly in Step 4 of deployment
+- ✅ Ensure all services are in the same VPC and can communicate internally
+- ✅ Verify Cloud SQL instance is running and accessible via private IP
 
 ## 🤝 Contributing
 
