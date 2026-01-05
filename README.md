@@ -15,11 +15,50 @@ An intelligent internal RAG (Retrieval Augmented Generation) application that al
 
 This project consists of four main components that work together to deliver intelligent corporate search capabilities:
 
-```text
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Frontend  │───▶│  AI Agent   │───▶│ MCP Toolbox │───▶│ PostgreSQL  │
-│ (Streamlit) │    │  (FastAPI)  │    │   (Tools)   │    │ (Database)  │
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+### System Overview
+
+```mermaid
+graph LR
+    User[👤 User] --> Frontend[🖥️ Frontend<br/>Streamlit<br/>Port 8501]
+    Frontend --> AIAgent[🤖 AI Agent<br/>FastAPI + Google ADK<br/>Port 8080]
+    AIAgent --> MCPToolbox[🔧 MCP Toolbox<br/>SQL Tools Server<br/>Port 8081]
+    MCPToolbox --> Database[🗄️ PostgreSQL<br/>Corporate Data<br/>Port 5432]
+
+    AIAgent --> Gemini[✨ Google AI<br/>Gemini Models]
+
+    style Frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
+    style AIAgent fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
+    style MCPToolbox fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px,color:#000
+    style Database fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    style Gemini fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000
+    style User fill:#f5f5f5,stroke:#424242,stroke-width:2px,color:#000
+```
+
+### Sequential Agent Architecture
+
+```mermaid
+sequenceDiagram
+    participant U as 👤 User
+    participant F as 🖥️ Frontend
+    participant R as 🔍 Retriever Agent
+    participant P as 📊 Presenter Agent
+    participant M as 🔧 MCP Toolbox
+    participant D as 🗄️ Database
+    participant G as ✨ Gemini AI
+
+    U->>F: "Who is our biggest customer?"
+    F->>R: Process natural language query
+    R->>G: Generate SQL analysis plan
+    G-->>R: SQL query strategy
+    R->>M: Execute SQL tools
+    M->>D: Query corporate data
+    D-->>M: Return results
+    M-->>R: Formatted data response
+    R->>P: Pass data context
+    P->>G: Generate insights + visualizations
+    G-->>P: Analysis + Vega-Lite charts
+    P-->>F: Complete response with charts
+    F-->>U: Interactive analysis + charts
 ```
 
 ### Components
@@ -79,6 +118,57 @@ This project consists of four main components that work together to deliver inte
 ## 🛠️ Development
 
 The project is designed for easy development with **Docker Compose watch** for instant file synchronization:
+
+### Environment Comparison
+
+```mermaid
+flowchart LR
+    subgraph "🛠️ Development Environment"
+        DevFrontend[🖥️ Frontend<br/>Docker + Watch<br/>localhost:8501]
+        DevAI[🤖 AI Agent<br/>Docker + Watch<br/>localhost:8080]
+        DevMCP[🔧 MCP Toolbox<br/>Docker<br/>localhost:8081]
+        DevDB[(🗄️ PostgreSQL<br/>Docker Container<br/>localhost:5432)]
+        DevSecrets[📄 .env Files<br/>Local Config]
+
+        DevFrontend --> DevAI
+        DevAI --> DevMCP
+        DevMCP --> DevDB
+        DevAI --> DevSecrets
+    end
+
+    subgraph "☁️ Production Environment"
+        ProdFrontend[🖥️ Frontend<br/>Cloud Run<br/>Public Access]
+        ProdAI[🤖 AI Agent<br/>Cloud Run<br/>Internal Only]
+        ProdMCP[🔧 MCP Toolbox<br/>Cloud Run<br/>Internal Only]
+        ProdDB[(🗄️ Cloud SQL<br/>PostgreSQL<br/>Private Network)]
+        ProdSecrets[🔐 Secret Manager<br/>Volume Mounts]
+        ProdVPC[🔗 VPC Network<br/>Private Connectivity]
+
+        ProdFrontend --> ProdAI
+        ProdAI --> ProdMCP
+        ProdMCP --> ProdDB
+        ProdVPC --> ProdFrontend
+        ProdVPC --> ProdAI
+        ProdVPC --> ProdMCP
+        ProdVPC --> ProdDB
+        ProdSecrets --> ProdAI
+        ProdSecrets --> ProdMCP
+    end
+
+    DevMCP -.- ProdMCP
+    DevAI -.- ProdAI
+    DevFrontend -.- ProdFrontend
+
+    style DevFrontend fill:#e1f5fe
+    style DevAI fill:#f3e5f5
+    style DevMCP fill:#e8f5e8
+    style DevDB fill:#fff3e0
+    style ProdFrontend fill:#b3e5fc
+    style ProdAI fill:#e1bee7
+    style ProdMCP fill:#c8e6c9
+    style ProdDB fill:#ffe0b2
+    style ProdVPC fill:#f0f0f0
+```
 
 ### Development Modes
 
@@ -238,6 +328,63 @@ A Streamlit-based chat interface with advanced features:
 - Error handling and validation for chart rendering
 - Responsive design with status indicators
 
+### Data Flow & Processing Pipeline
+
+```mermaid
+flowchart TD
+    subgraph "User Interface Layer"
+        UserQuery[👤 User Query<br/>"Who is our biggest customer?"]
+        ChatInterface[💬 Streamlit Chat Interface]
+        ChartDisplay[📊 Interactive Charts]
+    end
+
+    subgraph "AI Agent Processing"
+        QueryProcessor[🔍 Query Analysis]
+        RetrieverAgent[🔄 Retriever Agent]
+        PresenterAgent[📝 Presenter Agent]
+        GeminiAPI[✨ Gemini AI Models]
+    end
+
+    subgraph "Data Layer"
+        MCPTools[🔧 MCP SQL Tools]
+        SQLQueries[📝 Generated Queries]
+        Database[(🗄️ PostgreSQL<br/>Corporate Data)]
+        Results[📊 Query Results]
+    end
+
+    subgraph "Response Generation"
+        DataAnalysis[📈 Statistical Analysis]
+        VegaLiteCharts[📊 Vega-Lite Specs]
+        BusinessInsights[💡 Business Insights]
+        FinalResponse[✅ Complete Response]
+    end
+
+    UserQuery --> ChatInterface
+    ChatInterface --> QueryProcessor
+    QueryProcessor --> RetrieverAgent
+    RetrieverAgent <--> GeminiAPI
+    RetrieverAgent --> MCPTools
+    MCPTools --> SQLQueries
+    SQLQueries --> Database
+    Database --> Results
+    Results --> RetrieverAgent
+    RetrieverAgent --> PresenterAgent
+    PresenterAgent <--> GeminiAPI
+    PresenterAgent --> DataAnalysis
+    PresenterAgent --> VegaLiteCharts
+    PresenterAgent --> BusinessInsights
+    DataAnalysis --> FinalResponse
+    VegaLiteCharts --> FinalResponse
+    BusinessInsights --> FinalResponse
+    FinalResponse --> ChatInterface
+    ChatInterface --> ChartDisplay
+
+    style UserQuery fill:#e3f2fd
+    style GeminiAPI fill:#fce4ec
+    style Database fill:#fff3e0
+    style FinalResponse fill:#e8f5e8
+```
+
 ## 🌐 Deployment
 
 ### Local Development
@@ -247,6 +394,91 @@ Use the provided Docker Compose setup for local development and testing.
 ### Cloud Infrastructure
 
 The `iac/` directory contains Terraform configurations for deploying to Google Cloud Platform using a **two-environment approach**:
+
+### Infrastructure Architecture
+
+```mermaid
+graph TB
+    subgraph "🌐 Google Cloud Platform"
+        subgraph "Foundation Environment"
+            VPC[🔗 VPC Network<br/>corporate-search-vpc]
+            CloudSQL[🗄️ Cloud SQL<br/>PostgreSQL + IAM]
+            ServiceAccounts[🔐 Service Accounts<br/>IAM Roles]
+            ArtifactRegistry[📦 Artifact Registry<br/>Container Images]
+            SecretManager[🔑 Secret Manager<br/>API Keys + Config]
+            APIs[⚙️ Enabled APIs<br/>Cloud Run, SQL, etc.]
+        end
+
+        subgraph "Runtime Environment"
+            subgraph "VPC Subnet: 10.0.0.0/24"
+                Frontend[🖥️ Frontend Service<br/>Public Access]
+                AIAgent[🤖 AI Agent Service<br/>Internal Only]
+                MCPToolbox[🔧 MCP Toolbox Service<br/>Internal Only]
+            end
+        end
+
+        VPC --> Frontend
+        VPC --> AIAgent
+        VPC --> MCPToolbox
+        CloudSQL --> AIAgent
+        CloudSQL --> MCPToolbox
+        ServiceAccounts --> Frontend
+        ServiceAccounts --> AIAgent
+        ServiceAccounts --> MCPToolbox
+        SecretManager --> AIAgent
+        SecretManager --> MCPToolbox
+        ArtifactRegistry --> Frontend
+        ArtifactRegistry --> AIAgent
+        ArtifactRegistry --> MCPToolbox
+    end
+
+    Internet[🌍 Internet] --> Frontend
+    Frontend --> AIAgent
+    AIAgent --> MCPToolbox
+    AIAgent --> Gemini[✨ Google AI API]
+
+    style Frontend fill:#e1f5fe
+    style AIAgent fill:#f3e5f5
+    style MCPToolbox fill:#e8f5e8
+    style CloudSQL fill:#fff3e0
+    style VPC fill:#f0f0f0
+```
+
+### Deployment Dependencies
+
+```mermaid
+flowchart TD
+    Start([🚀 Start Deployment]) --> Foundation{Deploy Foundation}
+    Foundation --> APIs[✅ Enable APIs]
+    APIs --> VPCSetup[✅ Create VPC + Subnet]
+    VPCSetup --> CloudSQLSetup[✅ Setup Cloud SQL]
+    CloudSQLSetup --> ServiceAccountsSetup[✅ Create Service Accounts]
+    ServiceAccountsSetup --> ArtifactRegistrySetup[✅ Create Artifact Registry]
+    ArtifactRegistrySetup --> SecretsSetup[✅ Setup Secret Manager]
+
+    SecretsSetup --> BuildImages{Build & Push Images}
+    BuildImages --> FrontendBuild[📦 Build Frontend]
+    BuildImages --> AIAgentBuild[📦 Build AI Agent]
+    BuildImages --> MCPBuild[📦 Build MCP Toolbox]
+
+    FrontendBuild --> CreateSecrets
+    AIAgentBuild --> CreateSecrets
+    MCPBuild --> CreateSecrets[🔑 Populate Secrets]
+
+    CreateSecrets --> Runtime{Deploy Runtime}
+    Runtime --> FrontendService[🖥️ Deploy Frontend Service]
+    Runtime --> AIAgentService[🤖 Deploy AI Agent Service]
+    Runtime --> MCPService[🔧 Deploy MCP Toolbox Service]
+
+    FrontendService --> Complete([✅ Deployment Complete])
+    AIAgentService --> Complete
+    MCPService --> Complete
+
+    style Foundation fill:#e3f2fd
+    style Runtime fill:#f3e5f5
+    style BuildImages fill:#e8f5e8
+    style Complete fill:#c8e6c9
+```
 
 #### Foundation Environment (`iac/foundation/`)
 
@@ -274,7 +506,7 @@ Deploys the Cloud Run services that make up the application:
   - Database: Connected to Cloud SQL via IAM authentication
 - **MCP Toolbox Service** - Tool server with database access (internal access)
   - Resources: 1 CPU, 1Gi memory, scaling 0-10 instances
-  - Port: 8080, internal only (invoked by AI agent)
+  - Port: 8081, internal only (invoked by AI agent)
   - Database: Connected to Cloud SQL with direct connection attachment
 
 **Networking & Security:**
