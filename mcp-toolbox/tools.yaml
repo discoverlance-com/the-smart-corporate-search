@@ -5,8 +5,8 @@ sources:
     region: ${DB_REGION}
     instance: ${DB_INSTANCE}
     database: ${DB_NAME}
-    user: ${DB_USER}
-    password: ${DB_PASSWORD}
+    user: ${DB_USER} # we'll use a service account for auth; password can be empty
+    password: ""
     ipType: "private" # Use "public" if connecting over public IP
 
 tools:
