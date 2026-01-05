@@ -41,6 +41,14 @@ resource "google_sql_database_instance" "instance" {
 
     user_labels = var.user_labels
   }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<EOT
+    echo "Destroy may fail if IAM users own database objects."
+    echo "Manually drop objects or the database before retrying."
+    EOT
+  }
 }
 
 # Create databases
@@ -84,6 +92,8 @@ resource "google_sql_user" "iam_service_account_users" {
   instance = google_sql_database_instance.instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
   project  = var.project_id
+
+  depends_on = [google_sql_database_instance.instance, google_sql_database.databases]
 }
 
 # Create SQL IAM users for regular users
@@ -98,4 +108,6 @@ resource "google_sql_user" "iam_users" {
   instance = google_sql_database_instance.instance.name
   type     = "CLOUD_IAM_USER"
   project  = var.project_id
+
+  depends_on = [google_sql_database_instance.instance, google_sql_database.databases]
 }
