@@ -46,7 +46,7 @@ module "frontend_service" {
 
   service_account = data.terraform_remote_state.foundation.outputs.frontend_service_account_email
 
-  ingress = "INGRESS_TRAFFIC_ALL"
+  ingress              = "INGRESS_TRAFFIC_ALL"
   invoker_iam_disabled = true
 
   vpc_access = {
@@ -175,7 +175,7 @@ module "mcp_toolbox_service" {
     args = [
       "--tools-file=/app/tools.yaml",
       "--address=0.0.0.0",
-      "--port=8080",
+      "--port=8081",
       "--telemetry-gcp"
     ]
     env = [
@@ -213,7 +213,7 @@ module "mcp_toolbox_service" {
       }
     ]
     ports = [{
-      container_port = 8080
+      container_port = 8081
     }]
     volume_mounts = [{
       name       = "tools-config"
