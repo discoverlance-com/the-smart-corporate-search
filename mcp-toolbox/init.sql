@@ -1,3 +1,10 @@
+
+-- Get all PostgreSQL users
+-- SELECT rolname
+-- FROM pg_roles
+-- WHERE rolcanlogin = true
+-- ORDER BY rolname;
+
 -- 1. CLEANUP (Idempotent: Safe to run multiple times)
 DROP TABLE IF EXISTS sales;
 DROP TABLE IF EXISTS products;
@@ -112,3 +119,20 @@ SELECT
     (random() * 10 + 1)::int,                 -- Random Qty 1-10
     (random() * 1000 + 100)::decimal(10,2)    -- Random Amount (simplified)
 FROM generate_series(1, 70);
+
+
+-- Grant IAM service account/user access to database
+-- Comment out below for production use; adjust as needed for your setup; replace 'mcpuser' with actual service account name
+-- GRANT USAGE ON SCHEMA public TO mcpuser;
+
+-- GRANT ALL PRIVILEGES
+-- ON TABLE public.sales
+-- TO mcpuser;
+
+-- GRANT ALL PRIVILEGES
+-- ON TABLE public.products
+-- TO mcpuser;
+
+-- GRANT ALL PRIVILEGES
+-- ON TABLE public.customers
+-- TO mcpuser;
