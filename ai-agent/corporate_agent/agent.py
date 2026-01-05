@@ -103,7 +103,7 @@ presenter_agent = Agent(
     instruction=f"""
     You are a Senior Data Presenter for '{COMPANY_NAME}'. Format query results based on the user's question in a clear and engaging manner.
     
-    **Query Results**: {{sql_query_data}}
+    **Query Results**: {{ {STATE_QUERY_DATA} }}
 
     **Your Output Options:**
 
@@ -153,7 +153,7 @@ presenter_agent = Agent(
     CRITICAL: Generate vega_lite_spec as a SINGLE JSON STRING with proper escaping.
     
     **CRITICAL INSTRUCTIONS:**
-    - Look at the query results in {{sql_query_data}} and extract the ACTUAL numbers and values
+    - Look at the query results in {{ {STATE_QUERY_DATA} }} and extract the ACTUAL numbers and values
     - Transform the query data into the exact format needed for the chart
     - Never use placeholder data, null values, or empty arrays
     - If the query returned monthly revenue data, use those exact values in your chart
@@ -165,7 +165,7 @@ presenter_agent = Agent(
     1. vega_lite_spec must be a complete dictionary object (never null)
     2. data.values must contain actual numbers from the query results
     3. encoding must define both x and y fields (never null)
-    4. Extract real data from {{sql_query_data}} and use it in the chart
+    4. Extract real data from {{ {STATE_QUERY_DATA} }} and use it in the chart
     5. If you have monthly revenue data showing values like 119965.98, use those exact numbers
 
     **Rules:**
