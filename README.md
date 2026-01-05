@@ -381,10 +381,21 @@ flowchart TD
     FinalResponse --> ChatInterface
     ChatInterface --> ChartDisplay
 
-    style UserQuery fill:#e3f2fd
-    style GeminiAPI fill:#fce4ec
-    style Database fill:#fff3e0
-    style FinalResponse fill:#e8f5e8
+    style UserQuery fill:#e3f2fd,stroke:#01579b,stroke-width:2px,color:#000
+    style GeminiAPI fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000
+    style Database fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    style FinalResponse fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px,color:#000
+    style ChatInterface fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
+    style QueryProcessor fill:#fff9c4,stroke:#f57f17,stroke-width:2px,color:#000
+    style RetrieverAgent fill:#e0f2f1,stroke:#00695c,stroke-width:2px,color:#000
+    style PresenterAgent fill:#fce4ec,stroke:#ad1457,stroke-width:2px,color:#000
+    style ChartDisplay fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px,color:#000
+    style MCPTools fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000
+    style SQLQueries fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    style Results fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
+    style DataAnalysis fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    style VegaLiteCharts fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px,color:#000
+    style BusinessInsights fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#000
 ```
 
 ## 🌐 Deployment
@@ -885,17 +896,3 @@ This project is actively under development. The AI agent orchestration and MCP t
 ## 📄 License
 
 MIT - See the [LICENSE](LICENSE) file for details.
-
----
-
-**Status**: ✅ Production Ready
-
-- ✅ Docker orchestration and service setup
-- ✅ Advanced frontend chat interface with chart rendering
-- ✅ Sequential AI agent system with specialized retriever and presenter agents
-- ✅ Comprehensive MCP toolbox with SQL analytics tools
-- ✅ Interactive Vega-Lite chart generation and visualization
-- ✅ Persistent chat history and chart storage
-- ✅ Detailed analytical insights and business intelligence
-- ✅ Foundation infrastructure with VPC, Cloud SQL, and service accounts
-- ✅ Runtime Cloud Run services with auto-scaling and IAM authentication
