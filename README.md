@@ -159,15 +159,17 @@ flowchart LR
     DevAI -.- ProdAI
     DevFrontend -.- ProdFrontend
 
-    style DevFrontend fill:#e1f5fe
-    style DevAI fill:#f3e5f5
-    style DevMCP fill:#e8f5e8
-    style DevDB fill:#fff3e0
-    style ProdFrontend fill:#b3e5fc
-    style ProdAI fill:#e1bee7
-    style ProdMCP fill:#c8e6c9
-    style ProdDB fill:#ffe0b2
-    style ProdVPC fill:#f0f0f0
+    style DevFrontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
+    style DevAI fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
+    style DevMCP fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px,color:#000
+    style DevDB fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    style DevSecrets fill:#f5f5f5,stroke:#424242,stroke-width:2px,color:#000
+    style ProdFrontend fill:#b3e5fc,stroke:#0277bd,stroke-width:2px,color:#000
+    style ProdAI fill:#e1bee7,stroke:#7b1fa2,stroke-width:2px,color:#000
+    style ProdMCP fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style ProdDB fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px,color:#000
+    style ProdVPC fill:#f0f0f0,stroke:#616161,stroke-width:2px,color:#000
+    style ProdSecrets fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000
 ```
 
 ### Development Modes
@@ -333,7 +335,7 @@ A Streamlit-based chat interface with advanced features:
 ```mermaid
 flowchart TD
     subgraph "User Interface Layer"
-        UserQuery[👤 User Query<br/>"Who is our biggest customer?"]
+        UserQuery[👤 User Query<br/>Who is our biggest customer?]
         ChatInterface[💬 Streamlit Chat Interface]
         ChartDisplay[📊 Interactive Charts]
     end
@@ -420,7 +422,6 @@ graph TB
         VPC --> Frontend
         VPC --> AIAgent
         VPC --> MCPToolbox
-        CloudSQL --> AIAgent
         CloudSQL --> MCPToolbox
         ServiceAccounts --> Frontend
         ServiceAccounts --> AIAgent
@@ -437,11 +438,17 @@ graph TB
     AIAgent --> MCPToolbox
     AIAgent --> Gemini[✨ Google AI API]
 
-    style Frontend fill:#e1f5fe
-    style AIAgent fill:#f3e5f5
-    style MCPToolbox fill:#e8f5e8
-    style CloudSQL fill:#fff3e0
-    style VPC fill:#f0f0f0
+    style Frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
+    style AIAgent fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
+    style MCPToolbox fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px,color:#000
+    style CloudSQL fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    style VPC fill:#f0f0f0,stroke:#616161,stroke-width:2px,color:#000
+    style ServiceAccounts fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    style ArtifactRegistry fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000
+    style SecretManager fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    style APIs fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    style Internet fill:#fafafa,stroke:#424242,stroke-width:2px,color:#000
+    style Gemini fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000
 ```
 
 ### Deployment Dependencies
@@ -465,7 +472,15 @@ flowchart TD
     AIAgentBuild --> CreateSecrets
     MCPBuild --> CreateSecrets[🔑 Populate Secrets]
 
-    CreateSecrets --> Runtime{Deploy Runtime}
+    CreateSecrets --> DatabaseSetup{Database Setup}
+    DatabaseSetup --> CreateTempUser[🔧 Create Temp Admin User]
+    DatabaseSetup --> RunInitSQL[📊 Run init.sql Script]
+    DatabaseSetup --> GrantRoles[🔐 Grant IAM Service Account Roles]
+    CreateTempUser --> RunInitSQL
+    RunInitSQL --> GrantRoles
+    GrantRoles --> CleanupTempUser[🧹 Remove Temp User]
+
+    CleanupTempUser --> Runtime{Deploy Runtime}
     Runtime --> FrontendService[🖥️ Deploy Frontend Service]
     Runtime --> AIAgentService[🤖 Deploy AI Agent Service]
     Runtime --> MCPService[🔧 Deploy MCP Toolbox Service]
@@ -474,10 +489,23 @@ flowchart TD
     AIAgentService --> Complete
     MCPService --> Complete
 
-    style Foundation fill:#e3f2fd
-    style Runtime fill:#f3e5f5
-    style BuildImages fill:#e8f5e8
-    style Complete fill:#c8e6c9
+    style Foundation fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    style Runtime fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    style BuildImages fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000
+    style DatabaseSetup fill:#fff8e1,stroke:#ff8f00,stroke-width:2px,color:#000
+    style Complete fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style Start fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    style APIs fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
+    style VPCSetup fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
+    style CloudSQLSetup fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
+    style ServiceAccountsSetup fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
+    style ArtifactRegistrySetup fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
+    style SecretsSetup fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
+    style CreateSecrets fill:#fff9c4,stroke:#f57f17,stroke-width:2px,color:#000
+    style CreateTempUser fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
+    style RunInitSQL fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
+    style GrantRoles fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
+    style CleanupTempUser fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
 ```
 
 #### Foundation Environment (`iac/foundation/`)
