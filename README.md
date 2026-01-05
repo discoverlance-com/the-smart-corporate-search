@@ -37,43 +37,6 @@ This project consists of four main components that work together to deliver inte
 - Google AI API Key (Gemini)
 - For cloud deployment: Google Cloud Project with billing enabled
 
-### Container Image Prerequisites
-
-Before deploying to the cloud, you'll need to build and push container images to Google Artifact Registry:
-
-1. **Create Artifact Registry repository**:
-   If you don't already have an artifact registry, create one
-
-   ```bash
-   gcloud artifacts repositories create smart-corporate-search \
-     --repository-format=docker \
-     --location=us-central1 \
-     --description="Docker repository for smart corporate search application"
-   ```
-
-2. **Build and push images for each service**:
-
-   **AI Agent**:
-
-   ```bash
-   gcloud builds submit ai-agent/ \
-     --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/smart-corporate-search/ai-agent:latest
-   ```
-
-   **Frontend**:
-
-   ```bash
-   gcloud builds submit frontend/ \
-     --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/smart-corporate-search/frontend:latest
-   ```
-
-   **MCP Toolbox**:
-
-   ```bash
-   gcloud builds submit mcp-toolbox/ \
-     --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/smart-corporate-search/mcp-toolbox:latest
-   ```
-
 ### Setup
 
 1. **Clone the repository**
@@ -326,6 +289,8 @@ Deploys the Cloud Run services that make up the application:
 
 ##### Step 1: Deploy Foundation
 
+The foundation environment creates all core infrastructure including the Artifact Registry repository.
+
 1. Navigate to the foundation directory:
 
    ```bash
@@ -367,13 +332,24 @@ Deploys the Cloud Run services that make up the application:
    terraform apply
    ```
 
+   This creates:
+
+   - VPC network and subnet
+   - Cloud SQL PostgreSQL instance
+   - Service accounts for each service
+   - **Artifact Registry repository** for container images
+   - Google API Key secret in Secret Manager
+
 ##### Step 2: Build and Push Container Images
 
-After foundation deployment, build and push images to the created Artifact Registry:
+After foundation deployment successfully creates the Artifact Registry, build and push container images:
 
 ```bash
-# Get your artifact registry URL format
-REGISTRY="us-central1-docker.pkg.dev/YOUR_PROJECT_ID/smart-corporate-search"
+# Set your registry environment variable (replace with your actual project ID)
+export REGISTRY="us-central1-docker.pkg.dev/YOUR_PROJECT_ID/smart-corporate-search"
+
+# For PowerShell users:
+# $env:REGISTRY = "us-central1-docker.pkg.dev/YOUR_PROJECT_ID/smart-corporate-search"
 
 # Build and push AI Agent
 gcloud builds submit ai-agent/ --tag $REGISTRY/ai-agent:latest
@@ -385,16 +361,21 @@ gcloud builds submit frontend/ --tag $REGISTRY/frontend:latest
 gcloud builds submit mcp-toolbox/ --tag $REGISTRY/mcp-toolbox:latest
 ```
 
-##### Step 3: Create Google API Key Secret
+> **💡 Note**: The Artifact Registry repository is automatically created by the foundation deployment, so you don't need to create it manually.
 
-Before deploying the runtime, you need to create the Google API Key secret:
+##### Step 3: Create Secrets
+
+Before deploying the runtime, you need to create the required secrets:
 
 ```bash
+# Add the MCP tools configuration
+gcloud secrets versions add mcp-tools-config --data-file="mcp-toolbox/tools.yaml"
+
 # Set your Google API Key in the secret (replace with your actual API key)
 echo -n "YOUR_GOOGLE_API_KEY_HERE" | gcloud secrets versions add google-api-key --data-file=-
 
-# if you are using powershell, run the following
-# Save the secret to a temp file
+# if you are using powershell, run the following instead:
+# Save the Google API Key to a temp file
 "YOUR_GOOGLE_API_KEY_HERE" | Out-File -Encoding ASCII temp_secret.txt -NoNewline
 
 # Add it as a new version
@@ -406,7 +387,7 @@ Remove-Item temp_secret.txt
 
 ##### Step 4: Deploy Runtime
 
-After building and pushing container images, deploy the runtime services:
+After building and pushing container images and creating the required secrets, deploy the runtime services:
 
 ```bash
 cd iac/runtime
